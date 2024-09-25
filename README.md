@@ -7,7 +7,7 @@ You can shrimply add a `v` before `bsky.app` to turn it into an embed, so for ex
 `https://vbsky.app/profile/userhandle/post/wowzerssomepostid`
 
 ## Screenshots
-Here's some examples of the final result we can generate!
+Here's some screenshots of what we can generate!
 
 ### Telegram
 ![Image embed in Telegram](meta/image_example_telegram.webp)
