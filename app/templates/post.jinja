@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="#7FFFD4" name="theme-color" />
+    <meta property="og:site_name"
+        content="vbsky.app{% if disregard %} - disregard the following if you are not logged in to bsky{% endif %}" />
+    <meta property="og:title" content="{{display_name}} (@{{handle}})" />
+    <meta property="og:url" content="{{url}}" />
+    <link rel="canonical" href="{{url}}"/>
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{display_name}} (@{{handle}}) " />
+    {% for image_url in image_urls %}
+    <meta name="twitter:image" content="{{image_url}}" />
+    <meta property="og:image" content="{{image_url}}" />
+    {% endfor %}
+    {% if video is not none %}
+    <meta property="twitter:card" content="player" />
+    <meta property="twitter:player:height" content="{{video.height}}" />
+    <meta property="twitter:player:width" content="{{video.width}}" />
+    <meta property="twitter:player:stream" content="{{video.url}}" />
+    <meta property="twitter:player:stream:content_type" content="{{video.mime_type}}" />
+    <meta property="og:video" content="{{video.url}}" />
+    <meta property="og:video:secure_url" content="{{video.url}}" />
+    <meta property="og:video:height" content="{{video.height}}" />
+    <meta property="og:video:width" content="{{video.width}}" />
+    <meta property="og:video:type" content="{{video.mime_type}}" />
+    {% endif %}
+    {% if is_discord and video is not none %}
+    <link type="application/json+oembed" href="https://vbsky.app/oembed/author/{{text}}/{{escaped_url}}" name="{{text}}"/>
+    {% else %}
+    <meta property="og:description" content="{{text}}" />
+    {% endif %}
+    {% if instant_view is not none %}
+    <meta property="al:android:app_name" content="Medium" />
+    <meta property="article:published_time" content="{{created_at}}" />
+    {% else %}
+    <meta http-equiv="refresh" content="0; url = {{url}}" />
+    {% endif %}
+</head>
+{% if instant_view is not none %}
+
+<body>
+    <section class="section-backgroundImage">
+        <figure class="graf--layoutFillWidth"></figure>
+    </section>
+    <section class="section--first"><a href="{{url}}">View full thread</a></section>
+    <article>
+        <sub><a href="{{url}}">View full thread</a></sub>
+        <h1>{{display_name}} (<a href="{{instant_view.author_url}}">@{{handle}}</a>)</h1>
+
+        <p>{{instant_view.reply_count}} {{instant_view.repost_count}} {{instant_view.like_count}}
+            {{instant_view.quote_count}}</p>
+        <br><a href="{{url}}">View full thread</a>
+        {% for image_url in image_urls %}<img src="{{image_url}}" />{% endfor %}
+        {% if video is not none %}<video src="{{video.url}}"></video>{% endif %}
+        {% for paragraph in instant_view.paragraphs %}<p>{{paragraph}}</p>{% endfor %}
+        <h2>About author</h2>
+        <img src="{{instant_view.avatar}}" alt="{{display_name}}'s profile picture" />
+        <p><a href="{{instant_view.author_url}}">@{{handle}}</a></p>
+        <p><b>{{instant_view.bio}}</b></p>
+        <p></p>
+        {{instant_view.following}} <b>Following</b>
+        {{instant_view.followers}} <b>Followers</b>
+        {{instant_view.posts}} <b>Posts</b>
+        </p>
+
+        <br><a href="{{url}}">View full thread</a>
+    </article>
+</body>
+{% endif %}
+
+</html>

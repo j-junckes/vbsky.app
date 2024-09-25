@@ -1,0 +1,6 @@
+services:
+  vbsky-web:
+    build: .
+    ports:
+      - "5678:80"
+    restart: always
