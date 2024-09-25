@@ -2,6 +2,7 @@ from typing import Annotated
 import types
 from async_dns.core import types as DNSType
 from async_dns.resolver import ProxyResolver
+from fastapi.responses import RedirectResponse
 import httpx
 import json
 from fastapi import FastAPI, Request, Header
@@ -10,6 +11,11 @@ import textwrap
 from html import escape as html_escape
 from mixpanel import Mixpanel
 import os
+
+redirect_home_to_url = os.getenv('REDIRECT_HOME_TO_URL')
+
+if redirect_home_to_url is not None and not httpx.URL(redirect_home_to_url).is_absolute():
+    raise Exception('REDIRECT_HOME_TO_URL must be an absolute URL')
 
 mp_token = os.getenv('MIXPANEL_TOKEN')
 
@@ -34,6 +40,12 @@ async def get_oembed_author(author: str, url: str):
 @app.get("/ping")
 async def ping():
     return {"pong": "it works!"}
+
+@app.get("/")
+async def home():
+    if redirect_home_to_url is not None:
+        return RedirectResponse(url=redirect_home_to_url)
+    return RedirectResponse(url="https://bsky.app")
 
 @app.get("/profile/{profile}")
 async def get_profile_info(request: Request, profile: str, user_agent: Annotated[str | None, Header()] = None):
