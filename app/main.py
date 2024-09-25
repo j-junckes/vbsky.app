@@ -14,7 +14,7 @@ import os
 
 redirect_home_to_url = os.getenv('REDIRECT_HOME_TO_URL')
 
-if redirect_home_to_url is not None and not httpx.URL(redirect_home_to_url).is_absolute():
+if redirect_home_to_url is not None and not httpx.URL(redirect_home_to_url).is_absolute_url:
     raise Exception('REDIRECT_HOME_TO_URL must be an absolute URL')
 
 mp_token = os.getenv('MIXPANEL_TOKEN')
