@@ -49,7 +49,7 @@ async def home():
     return RedirectResponse(url='https://bsky.app')
 
 @app.get('/profile/{profile}')
-async def get_profile_info(request: Request, profile: str, user_agent: Annotated[str | None, Header()] = None):
+async def get_profile_info(request: Request, profile: str, user_agent: Annotated[str | None, Header()] = None, client_ip: str = Header(None, alias='X-Real-IP')):
     is_telegram = 'Telegram' in user_agent
     is_discord = 'Discord' in user_agent
     crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Other'
@@ -87,12 +87,14 @@ async def get_profile_info(request: Request, profile: str, user_agent: Annotated
     
     url = ('https://skychat.social/#profile/' if disregard else 'https://bsky.app/profile/') + did
     
-    client_ip = request.client.host
     mp.track(client_ip, event_name='Profile Generated', properties={
         'crawler': crawler,
         'did': did,
         'ip': client_ip
     })
+    
+    if client_ip is None:
+        client_ip = request.client.host
     
     return templates.TemplateResponse(
         request=request,
@@ -111,7 +113,7 @@ async def get_profile_info(request: Request, profile: str, user_agent: Annotated
     )
 
 @app.get('/profile/{profile}/post/{rkey}')
-async def get_post_info(request: Request, profile: str, rkey: str, user_agent: Annotated[str | None, Header()] = None):
+async def get_post_info(request: Request, profile: str, rkey: str, user_agent: Annotated[str | None, Header()] = None, client_ip: str = Header(None, alias='X-Real-IP')):
     is_telegram = 'Telegram' in user_agent
     is_discord = 'Discord' in user_agent
     crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Other'
@@ -209,7 +211,9 @@ async def get_post_info(request: Request, profile: str, rkey: str, user_agent: A
     if is_discord and video is not None:
         text = textwrap.shorten(text, width=255, placeholder='...')
     
-    client_ip = request.client.host
+    if client_ip is None:
+        client_ip = request.client.host
+    
     mp.track(client_ip, event_name='Post Generated', properties={
         'crawler': crawler,
         'did': did,
