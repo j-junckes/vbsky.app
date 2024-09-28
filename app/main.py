@@ -11,6 +11,7 @@ import textwrap
 from html import escape as html_escape
 from mixpanel import Mixpanel
 import os
+from ua_parser import user_agent_parser
 
 redirect_home_to_url = os.getenv('REDIRECT_HOME_TO_URL')
 
@@ -25,9 +26,9 @@ if mp_token is None:
 mp = Mixpanel(mp_token)
 
 app = FastAPI()
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory='app/templates')
 
-@app.get("/oembed/author/{author}/{url}")
+@app.get('/oembed/author/{author}/{url}')
 async def get_oembed_author(author: str, url: str):
     return {
         'type': 'video',
@@ -37,21 +38,22 @@ async def get_oembed_author(author: str, url: str):
         'provider_url': url,
     }
 
-@app.get("/ping")
+@app.get('/ping')
 async def ping():
-    return {"pong": "it works!"}
+    return {'pong': 'it works!'}
 
-@app.get("/")
+@app.get('/')
 async def home():
     if redirect_home_to_url is not None:
         return RedirectResponse(url=redirect_home_to_url)
-    return RedirectResponse(url="https://bsky.app")
+    return RedirectResponse(url='https://bsky.app')
 
-@app.get("/profile/{profile}")
+@app.get('/profile/{profile}')
 async def get_profile_info(request: Request, profile: str, user_agent: Annotated[str | None, Header()] = None):
     is_telegram = 'Telegram' in user_agent
     is_discord = 'Discord' in user_agent
     crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Other'
+    parsed_user_agent = user_agent_parser.Parse(user_agent)
     
     did = None
     if profile.startswith('did:'):
@@ -86,7 +88,7 @@ async def get_profile_info(request: Request, profile: str, user_agent: Annotated
     url = ('https://skychat.social/#profile/' if disregard else 'https://bsky.app/profile/') + did
     
     client_ip = request.client.host
-    mp.track("anonymous", event_name='Profile Generated', properties={
+    mp.track(client_ip, event_name='Profile Generated', properties={
         'crawler': crawler,
         'did': did,
         'ip': client_ip
@@ -94,22 +96,26 @@ async def get_profile_info(request: Request, profile: str, user_agent: Annotated
     
     return templates.TemplateResponse(
         request=request,
-        name="profile.jinja",
+        name='profile.jinja',
         context={
-            "disregard": disregard,
-            "display_name": display_name,
-            "handle": handle,
-            "avatar": avatar,
-            "bio": bio,
-            "url": url
+            'disregard': disregard,
+            'display_name': display_name,
+            'handle': handle,
+            'avatar': avatar,
+            'bio': bio,
+            'url': url,
+            '$browser': parsed_user_agent['user_agent']['family'],
+            '$device': parsed_user_agent['device']['family'],
+            '$os': parsed_user_agent['os']['family'],
         }
     )
 
-@app.get("/profile/{profile}/post/{rkey}")
+@app.get('/profile/{profile}/post/{rkey}')
 async def get_post_info(request: Request, profile: str, rkey: str, user_agent: Annotated[str | None, Header()] = None):
     is_telegram = 'Telegram' in user_agent
     is_discord = 'Discord' in user_agent
     crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Other'
+    parsed_user_agent = user_agent_parser.Parse(user_agent)
     
     did = None
     if profile.startswith('did:'):
@@ -201,36 +207,39 @@ async def get_post_info(request: Request, profile: str, rkey: str, user_agent: A
     text = reply + post['value']['text'] + quote
     
     if is_discord and video is not None:
-        text = textwrap.shorten(text, width=255, placeholder="...")
+        text = textwrap.shorten(text, width=255, placeholder='...')
     
     client_ip = request.client.host
-    mp.track("anonymous", event_name='Post Generated', properties={
+    mp.track(client_ip, event_name='Post Generated', properties={
         'crawler': crawler,
         'did': did,
         'rkey': rkey,
-        'ip': client_ip
+        'ip': client_ip,
+        '$browser': parsed_user_agent['user_agent']['family'],
+        '$device': parsed_user_agent['device']['family'],
+        '$os': parsed_user_agent['os']['family'],
     })
 
     return templates.TemplateResponse(
-        request=request, name="post.jinja", context={
-            "disregard": disregard,
-            "display_name": display_name,
-            "handle": handle,
-            "text": text,
-            "image_urls": image_urls,
-            "video": video,
-            "url": url,
-            "escaped_url": html_escape(url),
-            "created_at": created_at,
-            "instant_view": instant_view,
-            "is_telegram": is_telegram,
-            "is_discord": is_discord,
+        request=request, name='post.jinja', context={
+            'disregard': disregard,
+            'display_name': display_name,
+            'handle': handle,
+            'text': text,
+            'image_urls': image_urls,
+            'video': video,
+            'url': url,
+            'escaped_url': html_escape(url),
+            'created_at': created_at,
+            'instant_view': instant_view,
+            'is_telegram': is_telegram,
+            'is_discord': is_discord,
         }
     )
     
 dns_resolver = ProxyResolver()
 client = httpx.AsyncClient()
-headers={"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}
+headers={'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148'}
 
 class CannotResolveHandleException(Exception):
     pass
@@ -254,10 +263,9 @@ class InvalidDIDException(Exception):
 
 async def get_pds_and_handle(did):
     if did.startswith('did:plc:'):
-        print(f'https://plc.directory/{did}')
         doc = (await client.get(f'https://plc.directory/{did}', headers=headers)).json()
     elif did.startswith('did:web:'):
-        doc = (await client.get(f'https://{did[8:]}/.well-known/did.json')).json()
+        doc = (await client.get(f'https://{did[8:]}/.well-known/did.json', headers=headers)).json()
     else:
         raise InvalidDIDException
     
@@ -280,17 +288,16 @@ async def get_pds_and_handle(did):
     return pds, handle
 
 async def get_profile(pds, did):
-    return (await client.get(f'{pds}/xrpc/com.atproto.repo.getRecord?repo={did}&collection=app.bsky.actor.profile&rkey=self')).json()
+    return (await client.get(f'{pds}/xrpc/com.atproto.repo.getRecord?repo={did}&collection=app.bsky.actor.profile&rkey=self', headers=headers)).json()
 
 async def get_post(pds, did, rkey):
-    return (await client.get(f'{pds}/xrpc/com.atproto.repo.getRecord?repo={did}&collection=app.bsky.feed.post&rkey={rkey}')).json()
+    return (await client.get(f'{pds}/xrpc/com.atproto.repo.getRecord?repo={did}&collection=app.bsky.feed.post&rkey={rkey}', headers=headers)).json()
 
 def blob_url(pds, did, cid):
     return f'{pds}/xrpc/com.atproto.sync.getBlob?did={did}&cid={cid}'
 
 async def get_bsky_post_thread(uri):
-    print(f'https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri={uri}&depth=0&parentHeight=1')
-    return (await client.get(f'https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri={uri}&depth=0&parentHeight=1')).json()
+    return (await client.get(f'https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri={uri}&depth=0&parentHeight=1', headers=headers)).json()
 
 async def get_bsky_actor_profile(did):
-    return (await client.get(f'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor={did}')).json()
+    return (await client.get(f'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor={did}', headers=headers)).json()
