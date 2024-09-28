@@ -52,7 +52,8 @@ async def home():
 async def get_profile_info(request: Request, profile: str, user_agent: Annotated[str | None, Header()] = None, client_ip: str = Header(None, alias='X-Real-IP')):
     is_telegram = 'Telegram' in user_agent
     is_discord = 'Discord' in user_agent
-    crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Other'
+    is_ping_bot = 'Better Uptime Bot' in user_agent
+    crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Ping Bot' if is_ping_bot else 'Other'
     parsed_user_agent = user_agent_parser.Parse(user_agent)
     
     did = None
@@ -116,7 +117,8 @@ async def get_profile_info(request: Request, profile: str, user_agent: Annotated
 async def get_post_info(request: Request, profile: str, rkey: str, user_agent: Annotated[str | None, Header()] = None, client_ip: str = Header(None, alias='X-Real-IP')):
     is_telegram = 'Telegram' in user_agent
     is_discord = 'Discord' in user_agent
-    crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Other'
+    is_ping_bot = 'Better Uptime Bot' in user_agent
+    crawler = 'Telegram' if is_telegram else 'Discord' if is_discord else 'Ping Bot' if is_ping_bot else 'Other'
     parsed_user_agent = user_agent_parser.Parse(user_agent)
     
     did = None
